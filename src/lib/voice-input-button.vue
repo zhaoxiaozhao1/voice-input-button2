@@ -3,7 +3,8 @@
 <!-- Description: voice-input-btn -->
 <template>
   <div class="voice-input-button" :class="{active: recording, ready: isAudioAvailable}">
-    <div class="record-btn"
+    <div
+      class="record-btn"
       @contextmenu="menuPop"
       @mousedown="pressMode ? start($event) : toggle($event)"
       @mouseup="pressMode && stop($event)"
@@ -98,7 +99,7 @@ export default {
       if (e && e.type === 'mousedown' && e.which !== 1) return
       this.recording = false
       this.recorder && this.recorder.stop()
-      this.$emit('record-stop')
+      this.$emit('record-stop', '3221')
       this.processing = true
     },
     reset () {
@@ -149,14 +150,13 @@ export default {
       this.result = result
 
       // 如果是完成模式，则仅在识别结束时返回最终结果
-      if (this.completeMode && !ls) return
-      
+      if (this.completeMode && !ls) return           
       ls && this.reset()
 
       if (result) {
-        this.$emit('record', result)
-        this.$emit('input', result)
-        ls && this.$emit('record-complete', result)
+        this.$emit('record', result + '3211')
+        this.$emit('input', result + '3211')
+        ls && this.$emit('record-complete', result + '3211')
       } else {
         this.$emit('record-blank')
         this.blank = true
@@ -182,7 +182,7 @@ export default {
         this.stop()
         this.reset()
         this.processing = false
-        this.$emit('record-failed', error)
+        this.$emit('record-failed', 'error')
         alert(this.locale.socket_error)
       },
       onMessage: (e) => {
