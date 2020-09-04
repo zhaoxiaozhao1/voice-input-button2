@@ -30,14 +30,12 @@
 ### Install / 安装
 
 ```bash
-npm install voice-input-button2
-# or install from github reponsitory
-npm install https://github.com/ferrinweb/voice-input-button2.git
+# install from github reponsitory
+npm install https://github.com/zhaoxiaozhao1/voice-input-button2.git
 
 # or use yarn / 推荐使用 yarn
-yarn add voice-input-button2
-# or install from github reponsitory
-yarn add https://github.com/ferrinweb/voice-input-button2.git
+# install from github reponsitory
+yarn add https://github.com/zhaoxiaozhao1/voice-input-button2.git
 ```
 
 ### Import / 引入
