@@ -98,9 +98,10 @@ export default {
       e && e.cancelable && e.preventDefault()
       if (e && e.type === 'mousedown' && e.which !== 1) return
       this.recording = false
-      this.recorder && this.recorder.stop()
-      this.$emit('record-stop', '3221')
-      this.processing = true
+      if(this.recorder){
+        this.$emit('record-stop', this.recorder.stop())
+        this.processing = true
+      }    
     },
     reset () {
       buffer.splice(0)
@@ -154,9 +155,9 @@ export default {
       ls && this.reset()
 
       if (result) {
-        this.$emit('record', result + '3211')
-        this.$emit('input', result + '3211')
-        ls && this.$emit('record-complete', result + '3211')
+        this.$emit('record', result)
+        this.$emit('input', result)
+        ls && this.$emit('record-complete', result)
       } else {
         this.$emit('record-blank')
         this.blank = true
