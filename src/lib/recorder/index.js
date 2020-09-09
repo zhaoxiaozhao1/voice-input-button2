@@ -1,6 +1,6 @@
 /**
  * Created by lycheng on 2019/8/1.
- * 
+ * // eslint-disable-line
  * 语音听写流式 WebAPI 接口调用示例 接口文档（必看）：https://doc.xfyun.cn/rest_api/语音听写（流式版）.html
  * webApi 听写服务参考帖子（必看）：http://bbs.xfyun.cn/forum.php?mod=viewthread&tid=38947&extra=
  * 语音听写流式WebAPI 服务，热词使用方式：登陆开放平台https://www.xfyun.cn/后，找到控制台--我的应用---语音听写---个性化热词，上传热词
@@ -10,9 +10,9 @@
  * https://www.xfyun.cn/document/error-code （code返回错误码时必看）
  * 语音听写流式WebAPI 服务，方言或小语种试用方法：登陆开放平台https://www.xfyun.cn/后，在控制台--语音听写（流式）--方言/语种处添加
  * 添加后会显示该方言/语种的参数值
- * 
+ * // eslint-disable-line
  */
-
+ /* eslint-disable */ // eslint-disable-line
 import CryptoJS from './hmac-sha256'
 import './enc-base64-min'
 import recordWorker from './transform.pcm.worker'
@@ -47,8 +47,123 @@ class IatRecorder {
     this.ptt = config.ptt
     this.nunum = config.nunum
     this.vad_eos = config.vad_eos
+    this.leftDataList=[]
+    this.rightDataList=[]
   }
 
+  mergeArray (list) {
+    let length = list.length * list[0].length;
+    let data = new Float32Array(length),
+        offset = 0;
+    for (let i = 0; i < list.length; i++) {
+        data.set(list[i], offset);
+        offset += list[i].length;
+    }
+    return data;
+}
+// 交叉合并左右声道的数据
+ interleaveLeftAndRight (left, right) {
+  let totalLength = left.length + right.length;
+  let data = new Float32Array(totalLength);
+  for (let i = 0; i < left.length; i++) {
+      let k = i * 2;
+      data[k] = left[i];
+      data[k + 1] = right[i];
+  }
+  return data;
+}
+ createWavFile (audioData) {
+  const WAV_HEAD_SIZE = 44;
+  let buffer = new ArrayBuffer(audioData.length * 2 + WAV_HEAD_SIZE),
+      // 需要用一个view来操控buffer
+      view = new DataView(buffer);
+  // 写入wav头部信息
+  // RIFF chunk descriptor/identifier
+  this.writeUTFBytes(view, 0, 'RIFF');
+  // RIFF chunk length
+  view.setUint32(4, 44 + audioData.length * 2, true);
+  // RIFF type
+  this.writeUTFBytes(view, 8, 'WAVE');
+  // format chunk identifier
+  // FMT sub-chunk
+  this.writeUTFBytes(view, 12, 'fmt ');
+  // format chunk length
+  view.setUint32(16, 16, true);
+  // sample format (raw)
+  view.setUint16(20, 1, true);
+  // stereo (2 channels)
+  view.setUint16(22, 2, true);
+  // sample rate
+  view.setUint32(24, 44100, true);
+  // byte rate (sample rate * block align)
+  view.setUint32(28, 44100 * 2, true);
+  // block align (channel count * bytes per sample)
+  view.setUint16(32, 2 * 2, true);
+  // bits per sample
+  view.setUint16(34, 16, true);
+  // data sub-chunk
+  // data chunk identifier
+  this.writeUTFBytes(view, 36, 'data');
+  // data chunk length
+  view.setUint32(40, audioData.length * 2, true);
+  let length = audioData.length;
+  let index = 44;
+  let volume = 1;
+  for (let i = 0; i < length; i++) {
+      view.setInt16(index, audioData[i] * (0x7FFF * volume), true);
+      index += 2;
+  }
+  return buffer;
+}
+
+ writeUTFBytes (view, offset, string) {
+  var lng = string.length;
+  for (var i = 0; i < lng; i++) { 
+      view.setUint8(offset + i, string.charCodeAt(i));
+  }
+}
+ playRecord (arrayBuffer) {
+  let blob = new Blob([new Uint8Array(arrayBuffer)]);
+  const reader = new FileReader();
+  reader.readAsArrayBuffer(blob);
+  reader.onload = function (event) {
+
+    // 配置
+    const client = new OSS.Wrapper({
+        region: 'ss-cn-beijing',
+        accessKeyId: 'STS.NTgh32ZMFccMsvww5MUQiZVna',
+        accessKeySecret: '5TbHtmvDHGXRKhrfPoDXWYmpT4XpqUobVpu1kBfU12c8',
+        bucket: 'mswfilecentertest'
+    });
+
+    // 文件名
+    const objectKey = `uploads/file/${new Date().getTime()}.mp3`;
+
+    // arrayBuffer转Buffer
+    const buffer = new OSS.Buffer(event.target.result);
+
+    // 上传
+    client.put(objectKey, buffer).then(function(result){
+      console.log(result,'=-=-=-===-=-============')
+        /* e.g. result = {
+            name: "Uploads/file/20171125/1511601396119.png",
+            res: {status: 200, statusCode: 200, headers: {…}, size: 0, aborted: false, …},
+            url: "http://bucket.oss-cn-shenzhen.aliyuncs.com/Uploads/file/20171125/1511601396119.png"
+        } */
+    }).catch(function(err){
+        console.log(err);
+    });
+}
+  // let blobUrl = URL.createObjectURL(blob);
+  // if(audio) return
+  // const audio = new Audio();
+  //  audio.preload = 'automatic';
+  //  audio.src = blobUrl;
+  //  audio.load();
+  //  audio.play();
+  // console.log(blobUrl,'-=-=-=-==-=-')
+  }
+  // 初始化浏览器录音
   closeTrack () {
     try {
       if (this.recorder) {
@@ -72,7 +187,7 @@ class IatRecorder {
       const context = new AudioContext()
       this.context = context
     }
-    this.recorder = this.context.createScriptProcessor(0, 1, 1)
+    this.recorder = this.context.createScriptProcessor(4096, 2, 2)
 
     const getMediaSuccess = (stream) => {
       if (this.state === 'end') {
@@ -81,7 +196,15 @@ class IatRecorder {
       }
       const mediaStream = this.context.createMediaStreamSource(stream)
       this.mediaStream = mediaStream
+      this.leftDataList=[];
+      this.rightDataList=[];
       this.recorder && (this.recorder.onaudioprocess = (e) => {
+        let audioBuffer = event.inputBuffer;
+        let leftChannelData = audioBuffer.getChannelData(0),
+            rightChannelData = audioBuffer.getChannelData(1);
+        // 需要克隆一下
+        this.leftDataList.push(leftChannelData.slice(0));
+        this.rightDataList.push(rightChannelData.slice(0));
         if (this.state === 'end') {
           this.closeTrack()
           return
@@ -150,7 +273,18 @@ class IatRecorder {
   }
 
   stop () {
-    this.state = 'end'
+    if(this.leftDataList.length!=0&&this.rightDataList.length!=0){
+      let leftData = this.mergeArray(this.leftDataList),
+          rightData = this.mergeArray(this.rightDataList);
+      let allData = this.interleaveLeftAndRight(leftData, rightData);
+      let wavBuffer = this.createWavFile(allData);
+      this.state = 'end'
+      return wavBuffer
+    }else{
+      this.state = 'end'
+    }
+    
+    
   }
 
   sendData (buffer) {
